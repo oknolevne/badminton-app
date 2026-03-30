@@ -1,0 +1,160 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-body);
+  --font-mono: var(--font-geist-mono);
+  --font-heading: var(--font-display);
+  --font-display: var(--font-display);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+  /* Custom design tokens */
+  --color-stat-bg: var(--stat-bg);
+  --color-stat-border: var(--stat-border);
+  --color-stat-label: var(--stat-label);
+  --color-elo-bg: var(--elo-bg);
+  --color-elo-border: var(--elo-border);
+  --color-text-secondary: var(--text-secondary-color);
+  --color-text-subtle: var(--text-subtle);
+  --color-text-label: var(--text-label);
+  --color-background-nav: var(--background-nav);
+  --color-accent-secondary: var(--accent-secondary);
+  --color-border-subtle: var(--border-subtle);
+  --color-score-bg: var(--score-bg);
+  --color-score-border: var(--score-border);
+  --color-score-text: var(--score-text);
+}
+
+/* Slash Smash Badminton – Indigo/Blue design system */
+
+:root {
+  /* Light mode */
+  --background: #DFDFDF;
+  --foreground: #343434;
+  --card: #ffffff;
+  --card-foreground: #343434;
+  --popover: #ffffff;
+  --popover-foreground: #343434;
+  --primary: #0E34A0;
+  --primary-foreground: #ffffff;
+  --secondary: #2F3061;
+  --secondary-foreground: #ffffff;
+  --muted: #d4d4d4;
+  --muted-foreground: #5F5980;
+  --accent: #5F5980;
+  --accent-foreground: #ffffff;
+  --destructive: #ef4444;
+  --success: #22c55e;
+  --success-foreground: #ffffff;
+  --border: #cccccc;
+  --input: #cccccc;
+  --ring: #0E34A0;
+  --chart-1: #0E34A0;
+  --chart-2: #2F3061;
+  --chart-3: #5F5980;
+  --chart-4: #22c55e;
+  --chart-5: #3b82f6;
+  --radius: 0.75rem;
+  /* Custom tokens */
+  --background-nav: #d4d4d4;
+  --border-subtle: #dddddd;
+  --accent-secondary: #0E34A0;
+  --elo-bg: #2F3061;
+  --elo-border: #0E34A0;
+  --stat-bg: #ffffff;
+  --stat-border: #cccccc;
+  --stat-label: #5F5980;
+  --text-secondary-color: #343434;
+  --text-subtle: #5F5980;
+  --text-label: #5F5980;
+  --score-bg: rgba(14,52,160,0.07);
+  --score-border: rgba(14,52,160,0.2);
+  --score-text: #0E34A0;
+}
+
+.dark {
+  --background: #0d0f1a;
+  --foreground: #ffffff;
+  --card: #141628;
+  --card-foreground: #ffffff;
+  --popover: #141628;
+  --popover-foreground: #ffffff;
+  --primary: #5f7fff;
+  --primary-foreground: #ffffff;
+  --secondary: #2F3061;
+  --secondary-foreground: #ffffff;
+  --muted: #1e2040;
+  --muted-foreground: #5f6290;
+  --accent: #7a9aff;
+  --accent-foreground: #ffffff;
+  --destructive: #ef4444;
+  --success: #22c55e;
+  --success-foreground: #ffffff;
+  --border: #1e2040;
+  --input: #2a2d50;
+  --ring: #5f7fff;
+  --chart-1: #5f7fff;
+  --chart-2: #7a9aff;
+  --chart-3: #0E34A0;
+  --chart-4: #22c55e;
+  --chart-5: #3b82f6;
+  /* Custom tokens */
+  --background-nav: #090b15;
+  --border-subtle: #2a2d50;
+  --accent-secondary: #7a9aff;
+  --elo-bg: #0E34A0;
+  --elo-border: #1a44b8;
+  --stat-bg: #2F3061;
+  --stat-border: #3a3c78;
+  --stat-label: #8888bb;
+  --text-secondary-color: #d0d4ff;
+  --text-subtle: #3a3d5c;
+  --text-label: #8888bb;
+  --score-bg: rgba(14,52,160,0.15);
+  --score-border: rgba(95,127,255,0.25);
+  --score-text: #7a9aff;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
+}
