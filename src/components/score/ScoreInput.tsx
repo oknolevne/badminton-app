@@ -104,10 +104,14 @@ export function ScoreInput({ match, sessionId, open, onClose }: ScoreInputProps)
           {/* Team names */}
           <div className="flex items-center justify-between text-sm">
             <div className={cn("font-medium", team1Won && "text-success")}>
-              {match.team1[0].displayName} & {match.team1[1].displayName}
+              {match.isTraining
+                ? match.team1[0].displayName
+                : `${match.team1[0].displayName} & ${match.team1[1].displayName}`}
             </div>
             <div className={cn("font-medium text-right", team2Won && "text-success")}>
-              {match.team2[0].displayName} & {match.team2[1].displayName}
+              {match.isTraining
+                ? match.team2[0].displayName
+                : `${match.team2[0].displayName} & ${match.team2[1].displayName}`}
             </div>
           </div>
 

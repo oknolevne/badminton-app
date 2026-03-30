@@ -32,9 +32,11 @@ export function MatchCard({ match, onScoreClick }: MatchCardProps) {
           <p className="text-sm font-medium">
             {match.team1[0].displayName}
           </p>
-          <p className="text-sm font-medium">
-            {match.team1[1].displayName}
-          </p>
+          {!match.isTraining && (
+            <p className="text-sm font-medium">
+              {match.team1[1].displayName}
+            </p>
+          )}
         </div>
 
         {/* Score */}
@@ -59,9 +61,11 @@ export function MatchCard({ match, onScoreClick }: MatchCardProps) {
           <p className="text-sm font-medium">
             {match.team2[0].displayName}
           </p>
-          <p className="text-sm font-medium">
-            {match.team2[1].displayName}
-          </p>
+          {!match.isTraining && (
+            <p className="text-sm font-medium">
+              {match.team2[1].displayName}
+            </p>
+          )}
         </div>
       </div>
     </button>
