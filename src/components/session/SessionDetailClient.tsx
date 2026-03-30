@@ -51,22 +51,64 @@ export function SessionDetailClient({ session }: SessionDetailClientProps) {
       <Separator />
 
       {/* Blocks */}
-      {session.blocks.map((block) => (
-        <div key={block.blockNumber}>
-          <h3 className="mb-2 text-sm font-semibold text-muted-foreground">
-            Blok {block.blockNumber}
-          </h3>
-          <div className="space-y-2">
-            {block.matches.map((match) => (
-              <MatchCard
-                key={match.id}
-                match={match}
-                onScoreClick={handleScoreClick}
-              />
-            ))}
+      {session.blocks.map((block) => {
+        const mainMatches = block.matches.filter((m) => !m.isTraining)
+        const trainingMatches = block.matches.filter((m) => m.isTraining)
+
+        // Group main matches into time slots
+        const slotSize =
+          mainMatches.length >= 3 && mainMatches.length % 3 === 0
+            ? mainMatches.length / 3
+            : mainMatches.length
+
+        const slots: Match[][] = []
+        for (let i = 0; i < mainMatches.length; i += slotSize) {
+          slots.push(mainMatches.slice(i, i + slotSize))
+        }
+
+        return (
+          <div key={block.blockNumber}>
+            <h3 className="mb-3 text-sm font-semibold text-muted-foreground">
+              Blok {block.blockNumber}
+            </h3>
+            <div className="space-y-4">
+              {slots.map((slotMatches, slotIdx) => (
+                <div key={slotIdx}>
+                  <p className="mb-1 text-xs text-muted-foreground">
+                    Hra {slotIdx + 1}
+                  </p>
+                  <div className="space-y-2">
+                    {slotMatches.map((match) => (
+                      <MatchCard
+                        key={match.id}
+                        match={match}
+                        onScoreClick={handleScoreClick}
+                      />
+                    ))}
+                  </div>
+                </div>
+              ))}
+
+              {trainingMatches.length > 0 && (
+                <div>
+                  <p className="mb-1 text-xs text-muted-foreground">
+                    Trénink
+                  </p>
+                  <div className="space-y-2">
+                    {trainingMatches.map((match) => (
+                      <MatchCard
+                        key={match.id}
+                        match={match}
+                        onScoreClick={handleScoreClick}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
-        </div>
-      ))}
+        )
+      })}
 
       {/* Score Input Sheet */}
       <ScoreInput
