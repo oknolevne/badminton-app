@@ -1,9 +1,7 @@
 import type { Metadata } from "next"
-import { Bebas_Neue, DM_Sans, Geist } from "next/font/google"
+import { Bebas_Neue, DM_Sans } from "next/font/google"
+import { cn } from "@/lib/utils"
 import "./globals.css"
-import { cn } from "@/lib/utils";
-
-const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 
 const bebasNeue = Bebas_Neue({
   weight: "400",
@@ -27,7 +25,7 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="cs" className={cn("dark", bebasNeue.variable, dmSans.variable, "font-sans", geist.variable)}>
+    <html lang="cs" className={cn("dark", bebasNeue.variable, dmSans.variable)}>
       <body className="min-h-dvh bg-background text-foreground font-sans antialiased">
         {children}
       </body>
