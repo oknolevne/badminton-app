@@ -17,11 +17,20 @@ export default async function AppLayout({
     redirect("/login")
   }
 
+  // Check for active session
+  const { data: activeSession } = await supabase
+    .from("sessions")
+    .select("id")
+    .eq("status", "active")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
   return (
     <div className="flex min-h-dvh flex-col">
       <TopBar />
       <main className="flex-1 pb-20">{children}</main>
-      <BottomNav />
+      <BottomNav activeSessionId={activeSession?.id ?? null} />
     </div>
   )
 }

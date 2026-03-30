@@ -5,25 +5,35 @@ import { usePathname } from "next/navigation"
 import { Home, Calendar, Trophy, User } from "lucide-react"
 import { cn } from "@/lib/utils"
 
-const NAV_ITEMS = [
-  { href: "/dashboard", label: "Domů", icon: Home },
-  { href: "/session/new", label: "Večer", icon: Calendar },
-  { href: "/leaderboard", label: "Žebříček", icon: Trophy },
-  { href: "/profile", label: "Profil", icon: User },
-] as const
+interface BottomNavProps {
+  activeSessionId?: string | null
+}
 
-export function BottomNav() {
+export function BottomNav({ activeSessionId }: BottomNavProps) {
   const pathname = usePathname()
+
+  const sessionHref = activeSessionId
+    ? `/session/${activeSessionId}`
+    : "/session/new"
+
+  const navItems = [
+    { href: "/dashboard", label: "Domů", icon: Home },
+    { href: sessionHref, label: "Večer", icon: Calendar },
+    { href: "/leaderboard", label: "Žebříček", icon: Trophy },
+    { href: "/profile", label: "Profil", icon: User },
+  ]
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 flex h-16 items-center justify-around border-t border-border-subtle bg-background-nav">
-      {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
+      {navItems.map(({ href, label, icon: Icon }) => {
         const isActive =
-          pathname === href || pathname.startsWith(href + "/")
+          pathname === href ||
+          pathname.startsWith(href + "/") ||
+          (label === "Večer" && pathname.startsWith("/session"))
 
         return (
           <Link
-            key={href}
+            key={label}
             href={href}
             className={cn(
               "flex flex-col items-center gap-1 px-3 py-2 text-xs transition-colors",
