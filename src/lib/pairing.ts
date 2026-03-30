@@ -13,13 +13,16 @@ interface ScheduleBlock {
   matches: ScheduleMatch[]
 }
 
+const MAX_SLOTS = 3
+
 /**
  * Generate a match schedule for a session.
  *
+ * Model:
  * - 3 blocks, each with unique teammate pairs (no pair repeats across blocks)
- * - ELO-balanced pairs via snake-draft (strongest + weakest)
- * - Training pair rotates each block (if playerCount % 4 === 2)
- * - Matches: simple 1:1 pairing of pairs (pair[0] vs pair[1], pair[2] vs pair[3], ...)
+ * - Within each block: round-robin (circle method) — every pair plays every other
+ * - Max 3 time slots per block (capped for 6+ pairs)
+ * - Training pair rotates each block, plays as many training matches as there are slots
  */
 export function generateSchedule(players: Player[]): ScheduleBlock[] {
   const sorted = [...players].sort((a, b) => b.elo - a.elo)
@@ -34,7 +37,6 @@ export function generateSchedule(players: Player[]): ScheduleBlock[] {
     let trainingPlayers: Player[] = []
 
     if (hasTraining) {
-      // Rotate training pair: block 0 → weakest 2, block 1 → next 2, etc.
       const idx1 = n - 2 - blockIdx * 2
       const idx2 = n - 1 - blockIdx * 2
       const safeIdx1 = ((idx1 % n) + n) % n
@@ -47,29 +49,45 @@ export function generateSchedule(players: Player[]): ScheduleBlock[] {
       mainPlayers = [...sorted]
     }
 
-    // Snake-draft pairs
+    // Snake-draft pairs + uniqueness swap
     let pairs = createBalancedPairs(mainPlayers)
-
-    // Ensure no pair was used in a previous block
     pairs = ensureUniquePairs(pairs, usedPairs)
 
-    // Register used pairs
     for (const [p1, p2] of pairs) {
       usedPairs.add(pairKey(p1, p2))
     }
 
-    // Generate matches: pair[0] vs pair[1], pair[2] vs pair[3], ...
-    const matches = createMatchesFromPairs(pairs, blockIdx + 1)
+    // Round-robin slots (circle method, max 3)
+    const slots = generateRoundRobinSlots(pairs)
 
-    // Add training match
+    // Flatten slots into matches
+    const matches: ScheduleMatch[] = []
+    let matchNumber = 1
+
+    for (const slot of slots) {
+      for (const matchup of slot) {
+        matches.push({
+          blockNumber: blockIdx + 1,
+          matchNumber: matchNumber++,
+          team1: matchup.team1,
+          team2: matchup.team2,
+          isTraining: false,
+        })
+      }
+    }
+
+    // Training matches = number of slots (so training pair plays alongside others)
     if (trainingPlayers.length === 2) {
-      matches.push({
-        blockNumber: blockIdx + 1,
-        matchNumber: matches.length + 1,
-        team1: [trainingPlayers[0], trainingPlayers[1]],
-        team2: [trainingPlayers[1], trainingPlayers[0]],
-        isTraining: true,
-      })
+      const numTrainingMatches = slots.length
+      for (let i = 0; i < numTrainingMatches; i++) {
+        matches.push({
+          blockNumber: blockIdx + 1,
+          matchNumber: matchNumber++,
+          team1: [trainingPlayers[0], trainingPlayers[1]],
+          team2: [trainingPlayers[1], trainingPlayers[0]],
+          isTraining: true,
+        })
+      }
     }
 
     blocks.push({ blockNumber: blockIdx + 1, matches })
@@ -79,8 +97,44 @@ export function generateSchedule(players: Player[]): ScheduleBlock[] {
 }
 
 /**
- * Snake-draft pairing: strongest with weakest, second strongest with second weakest, etc.
- * Does NOT check uniqueness — that's handled by ensureUniquePairs.
+ * Round-robin scheduling using the circle method.
+ * N pairs → min(N-1, MAX_SLOTS) time slots, each with N/2 simultaneous matches.
+ */
+function generateRoundRobinSlots(
+  pairs: [Player, Player][]
+): { team1: [Player, Player]; team2: [Player, Player] }[][] {
+  const n = pairs.length
+  if (n < 2) return []
+
+  const numRounds = Math.min(n - 1, MAX_SLOTS)
+  const indices = Array.from({ length: n }, (_, i) => i)
+  const slots: { team1: [Player, Player]; team2: [Player, Player] }[][] = []
+
+  for (let round = 0; round < numRounds; round++) {
+    const slot: { team1: [Player, Player]; team2: [Player, Player] }[] = []
+
+    for (let i = 0; i < n / 2; i++) {
+      slot.push({
+        team1: pairs[indices[i]],
+        team2: pairs[indices[n - 1 - i]],
+      })
+    }
+
+    slots.push(slot)
+
+    // Rotate: fix first, shift rest right by 1
+    const last = indices[n - 1]
+    for (let i = n - 1; i > 1; i--) {
+      indices[i] = indices[i - 1]
+    }
+    indices[1] = last
+  }
+
+  return slots
+}
+
+/**
+ * Snake-draft pairing: strongest with weakest.
  */
 export function createBalancedPairs(players: Player[]): [Player, Player][] {
   const available = [...players].sort((a, b) => b.elo - a.elo)
@@ -96,8 +150,7 @@ export function createBalancedPairs(players: Player[]): [Player, Player][] {
 }
 
 /**
- * Swap players between pairs to resolve conflicts with previously used pairs.
- * For each conflicting pair, try swapping one player with another pair (2 variants).
+ * Swap players between pairs to resolve uniqueness conflicts.
  */
 function ensureUniquePairs(
   pairs: [Player, Player][],
@@ -116,7 +169,6 @@ function ensureUniquePairs(
     for (let otherIdx = 0; otherIdx < result.length; otherIdx++) {
       if (otherIdx === conflictIdx) continue
 
-      // Variant A: swap first players between pairs
       const newA1: [Player, Player] = [result[conflictIdx][0], result[otherIdx][0]]
       const newA2: [Player, Player] = [result[conflictIdx][1], result[otherIdx][1]]
 
@@ -128,7 +180,6 @@ function ensureUniquePairs(
         break
       }
 
-      // Variant B: swap cross
       const newB1: [Player, Player] = [result[conflictIdx][0], result[otherIdx][1]]
       const newB2: [Player, Player] = [result[conflictIdx][1], result[otherIdx][0]]
 
@@ -149,29 +200,6 @@ function ensureUniquePairs(
 
 function pairKey(p1: Player, p2: Player): string {
   return `${Math.min(p1.id, p2.id)}-${Math.max(p1.id, p2.id)}`
-}
-
-/**
- * Simple 1:1 pairing of pairs into matches.
- * pair[0] vs pair[1], pair[2] vs pair[3], etc.
- */
-function createMatchesFromPairs(
-  pairs: [Player, Player][],
-  blockNumber: number
-): ScheduleMatch[] {
-  const matches: ScheduleMatch[] = []
-
-  for (let i = 0; i + 1 < pairs.length; i += 2) {
-    matches.push({
-      blockNumber,
-      matchNumber: matches.length + 1,
-      team1: pairs[i],
-      team2: pairs[i + 1],
-      isTraining: false,
-    })
-  }
-
-  return matches
 }
 
 export function validatePlayerCount(count: number): {
