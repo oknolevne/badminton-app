@@ -60,11 +60,15 @@ export async function createSession(playerIds: number[]): Promise<{ sessionId: s
   })
 
   if (error) {
-    console.error("Create session failed:", error.message)
-    throw new Error("Chyba při vytváření večera")
+    console.error("Create session failed:", error.message, error.details, error.hint)
+    throw new Error(`Chyba při vytváření večera: ${error.message}`)
   }
 
-  const sessionId = data as string
+  if (!data) {
+    throw new Error("RPC nevrátilo ID session")
+  }
+
+  const sessionId = String(data)
 
   revalidatePath("/dashboard")
   return { sessionId }
