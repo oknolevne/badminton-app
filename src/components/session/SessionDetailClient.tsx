@@ -70,6 +70,7 @@ export function SessionDetailClient({ session }: SessionDetailClientProps) {
 
       {/* Score Input Sheet */}
       <ScoreInput
+        key={selectedMatch?.id}
         match={selectedMatch}
         sessionId={session.id}
         open={scoreOpen}

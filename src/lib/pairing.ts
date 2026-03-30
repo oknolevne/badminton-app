@@ -15,7 +15,8 @@ interface ScheduleBlock {
 
 /**
  * Generate a match schedule for a session.
- * Players are sorted by ELO and paired using snake-draft (strongest with weakest).
+ * Players are sorted by ELO. Each block uses round-robin rotation
+ * to ensure unique teammate pairs across blocks.
  * If playerCount % 4 === 2, the two lowest-ELO players play a training match.
  */
 export function generateSchedule(players: Player[]): ScheduleBlock[] {
@@ -29,8 +30,9 @@ export function generateSchedule(players: Player[]): ScheduleBlock[] {
   const numBlocks = 3
 
   for (let b = 0; b < numBlocks; b++) {
-    const shuffled = shuffleWithSeed(mainPlayers, b)
-    const pairs = createBalancedPairs(shuffled)
+    // Round-robin rotation: fix first player, rotate the rest
+    const rotated = rotatePlayersForBlock(mainPlayers, b)
+    const pairs = createBalancedPairs(rotated)
     const matches = createMatchesFromPairs(pairs, b + 1)
 
     if (b === 0 && trainingPlayers.length === 2) {
@@ -49,27 +51,30 @@ export function generateSchedule(players: Player[]): ScheduleBlock[] {
   return blocks
 }
 
-function shuffleWithSeed(players: Player[], seed: number): Player[] {
-  const arr = [...players]
-  for (let i = arr.length - 1; i > 0; i--) {
-    const j = ((seed + 1) * (i + 1) * 7 + arr[i].id) % (i + 1)
-    ;[arr[i], arr[j]] = [arr[j], arr[i]]
-  }
-  return arr
+/**
+ * Round-robin rotation: fix the first player, rotate rest by `rotation` positions.
+ * This guarantees different teammate pairs in each block.
+ */
+function rotatePlayersForBlock(players: Player[], rotation: number): Player[] {
+  if (players.length <= 2) return [...players]
+
+  const first = players[0]
+  const rest = players.slice(1)
+
+  // Rotate the rest array by `rotation` positions
+  const shift = rotation % rest.length
+  const rotated = [...rest.slice(shift), ...rest.slice(0, shift)]
+
+  return [first, ...rotated]
 }
 
 export function createBalancedPairs(players: Player[]): [Player, Player][] {
-  const sorted = [...players].sort((a, b) => b.elo - a.elo)
+  // Pair adjacent players: [0,1], [2,3], [4,5], ...
+  // Since rotation changes the order, this produces different pairs each block
   const pairs: [Player, Player][] = []
-  let left = 0
-  let right = sorted.length - 1
-
-  while (left < right) {
-    pairs.push([sorted[left], sorted[right]])
-    left++
-    right--
+  for (let i = 0; i + 1 < players.length; i += 2) {
+    pairs.push([players[i], players[i + 1]])
   }
-
   return pairs
 }
 
@@ -89,6 +94,7 @@ function createMatchesFromPairs(
     })
   }
 
+  // Fill remaining matches if needed (less than 3 matches)
   if (pairs.length >= 2 && matches.length < 3) {
     for (let i = 0; matches.length < 3 && i < pairs.length; i++) {
       const nextIdx = (i + 1) % pairs.length

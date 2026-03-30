@@ -16,8 +16,15 @@ export async function createSession(playerIds: number[]): Promise<{ sessionId: s
   const validation = validatePlayerCount(playerIds.length)
   if (!validation.valid) throw new Error(validation.message)
 
-  // Fetch players for schedule generation
   const supabase = await createClient()
+
+  // Close any existing active sessions (max 1 active at a time)
+  await supabase
+    .from("sessions")
+    .update({ status: "finished" })
+    .eq("status", "active")
+
+  // Fetch players for schedule generation
   const { data: players } = await supabase
     .from("players")
     .select("*")
@@ -182,4 +189,5 @@ export async function deleteSession(sessionId: string) {
   if (error) throw new Error("Chyba při mazání večera")
 
   revalidatePath("/dashboard")
+  revalidatePath("/leaderboard")
 }

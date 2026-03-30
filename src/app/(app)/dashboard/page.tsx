@@ -95,7 +95,7 @@ export default async function DashboardPage() {
                 >
                   <div>
                     <p className="text-sm text-foreground">
-                      s {match.partner} vs {match.opponents}
+                      {match.partner} vs {match.opponents}
                     </p>
                     <p className="text-xs text-muted-foreground">
                       {match.score}
