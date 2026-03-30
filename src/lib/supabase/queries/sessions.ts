@@ -49,7 +49,7 @@ async function buildSession(sessionId: string): Promise<Session | null> {
     .from("sessions")
     .select("*")
     .eq("id", sessionId)
-    .single()
+    .maybeSingle()
 
   if (!session) return null
 

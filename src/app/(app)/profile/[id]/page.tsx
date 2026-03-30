@@ -1,4 +1,3 @@
-import { use } from "react"
 import { notFound } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
 import { fetchPlayerStats, fetchEloHistory, fetchPlayerRank } from "@/lib/supabase/queries"
@@ -13,7 +12,7 @@ export default async function ProfilePage({
 }: {
   params: Promise<{ id: string }>
 }) {
-  const { id } = use(params)
+  const { id } = await params
   const playerId = parseInt(id)
 
   if (isNaN(playerId)) notFound()

@@ -1,4 +1,3 @@
-import { use } from "react"
 import { notFound } from "next/navigation"
 import { fetchSessionById } from "@/lib/supabase/queries"
 import { SessionDetailClient } from "@/components/session/SessionDetailClient"
@@ -8,7 +7,7 @@ export default async function SessionPage({
 }: {
   params: Promise<{ id: string }>
 }) {
-  const { id } = use(params)
+  const { id } = await params
   const session = await fetchSessionById(id)
 
   if (!session) notFound()
