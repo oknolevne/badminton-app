@@ -15,32 +15,60 @@ interface ScheduleBlock {
 
 /**
  * Generate a match schedule for a session.
- * Players are sorted by ELO. Each block uses round-robin rotation
- * to ensure unique teammate pairs across blocks.
- * If playerCount % 4 === 2, the two lowest-ELO players play a training match.
+ *
+ * - 3 blocks with unique teammate pairs across blocks
+ * - ELO-balanced pairs (greedy: strongest + weakest available)
+ * - Training pair rotates each block (if playerCount % 4 === 2)
  */
 export function generateSchedule(players: Player[]): ScheduleBlock[] {
   const sorted = [...players].sort((a, b) => b.elo - a.elo)
+  const n = sorted.length
+  const hasTraining = n % 4 === 2
 
-  const hasTraining = sorted.length % 4 === 2
-  const mainPlayers = hasTraining ? sorted.slice(0, sorted.length - 2) : [...sorted]
-  const trainingPlayers = hasTraining ? sorted.slice(sorted.length - 2) : []
-
+  const usedPairs = new Set<string>()
   const blocks: ScheduleBlock[] = []
-  const numBlocks = 3
 
-  for (let b = 0; b < numBlocks; b++) {
-    // Round-robin rotation: fix first player, rotate the rest
-    const rotated = rotatePlayersForBlock(mainPlayers, b)
-    const pairs = createBalancedPairs(rotated)
+  for (let b = 0; b < 3; b++) {
+    let mainPlayers: Player[]
+    let trainingPair: [Player, Player] | null = null
+
+    if (hasTraining) {
+      // Rotate training pair each block: block 0 → weakest 2, block 1 → next 2, etc.
+      const idx1 = n - 2 - b * 2
+      const idx2 = n - 1 - b * 2
+
+      // Cyclic mod for small player counts
+      const safeIdx1 = ((idx1 % n) + n) % n
+      const safeIdx2 = ((idx2 % n) + n) % n
+
+      const tp1 = sorted[safeIdx1]
+      const tp2 = sorted[safeIdx2]
+      trainingPair = [tp1, tp2]
+
+      const trainingIds = new Set([tp1.id, tp2.id])
+      mainPlayers = sorted.filter((p) => !trainingIds.has(p.id))
+    } else {
+      mainPlayers = [...sorted]
+    }
+
+    // Generate unique, ELO-balanced pairs
+    const pairs = createBalancedPairs(mainPlayers, usedPairs)
+
+    // Track used pairs
+    for (const [p1, p2] of pairs) {
+      usedPairs.add(pairKey(p1, p2))
+    }
+
+    // Create matches from pairs
     const matches = createMatchesFromPairs(pairs, b + 1)
 
-    if (b === 0 && trainingPlayers.length === 2) {
+    // Add training match
+    if (trainingPair) {
       matches.push({
-        blockNumber: 1,
+        blockNumber: b + 1,
         matchNumber: matches.length + 1,
-        team1: [trainingPlayers[0], trainingPlayers[1]],
-        team2: [trainingPlayers[1], trainingPlayers[0]],
+        team1: trainingPair,
+        team2: [trainingPair[1], trainingPair[0]],
         isTraining: true,
       })
     }
@@ -52,30 +80,44 @@ export function generateSchedule(players: Player[]): ScheduleBlock[] {
 }
 
 /**
- * Round-robin rotation: fix the first player, rotate rest by `rotation` positions.
- * This guarantees different teammate pairs in each block.
+ * Create ELO-balanced pairs with uniqueness constraint.
+ * Greedy: for the strongest available player, find the weakest available
+ * partner they haven't been paired with yet.
  */
-function rotatePlayersForBlock(players: Player[], rotation: number): Player[] {
-  if (players.length <= 2) return [...players]
+export function createBalancedPairs(
+  players: Player[],
+  usedPairs: Set<string>
+): [Player, Player][] {
+  const available = [...players].sort((a, b) => b.elo - a.elo)
+  const pairs: [Player, Player][] = []
 
-  const first = players[0]
-  const rest = players.slice(1)
+  while (available.length >= 2) {
+    const p1 = available.shift()!
 
-  // Rotate the rest array by `rotation` positions
-  const shift = rotation % rest.length
-  const rotated = [...rest.slice(shift), ...rest.slice(0, shift)]
+    // Find weakest available partner not yet used
+    let foundIdx = -1
+    for (let j = available.length - 1; j >= 0; j--) {
+      if (!usedPairs.has(pairKey(p1, available[j]))) {
+        foundIdx = j
+        break
+      }
+    }
 
-  return [first, ...rotated]
+    if (foundIdx >= 0) {
+      const p2 = available.splice(foundIdx, 1)[0]
+      pairs.push([p1, p2])
+    } else {
+      // Fallback: all partners used, take the weakest anyway
+      const p2 = available.pop()!
+      pairs.push([p1, p2])
+    }
+  }
+
+  return pairs
 }
 
-export function createBalancedPairs(players: Player[]): [Player, Player][] {
-  // Pair adjacent players: [0,1], [2,3], [4,5], ...
-  // Since rotation changes the order, this produces different pairs each block
-  const pairs: [Player, Player][] = []
-  for (let i = 0; i + 1 < players.length; i += 2) {
-    pairs.push([players[i], players[i + 1]])
-  }
-  return pairs
+function pairKey(p1: Player, p2: Player): string {
+  return `${Math.min(p1.id, p2.id)}-${Math.max(p1.id, p2.id)}`
 }
 
 function createMatchesFromPairs(
@@ -84,6 +126,7 @@ function createMatchesFromPairs(
 ): ScheduleMatch[] {
   const matches: ScheduleMatch[] = []
 
+  // Primary matches: pair[0] vs pair[1], pair[2] vs pair[3], etc.
   for (let i = 0; i + 1 < pairs.length; i += 2) {
     matches.push({
       blockNumber,
@@ -94,19 +137,17 @@ function createMatchesFromPairs(
     })
   }
 
-  // Fill remaining matches if needed (less than 3 matches)
-  if (pairs.length >= 2 && matches.length < 3) {
-    for (let i = 0; matches.length < 3 && i < pairs.length; i++) {
-      const nextIdx = (i + 1) % pairs.length
-      if (i !== nextIdx) {
-        matches.push({
-          blockNumber,
-          matchNumber: matches.length + 1,
-          team1: pairs[i],
-          team2: pairs[nextIdx],
-          isTraining: false,
-        })
-      }
+  // Fill with cross-matches if needed (different pair combinations)
+  if (pairs.length >= 4 && matches.length < 3) {
+    // Cross-match: pair[0] vs pair[2], pair[1] vs pair[3], etc.
+    for (let i = 0; matches.length < 3 && i + 2 < pairs.length; i++) {
+      matches.push({
+        blockNumber,
+        matchNumber: matches.length + 1,
+        team1: pairs[i],
+        team2: pairs[i + 2],
+        isTraining: false,
+      })
     }
   }
 
