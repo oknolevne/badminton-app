@@ -18,11 +18,16 @@ export async function createSession(playerIds: number[]): Promise<{ sessionId: s
 
   const supabase = await createClient()
 
-  // Close any existing active sessions (max 1 active at a time)
-  await supabase
+  // Block if active session already exists
+  const { data: existingActive } = await supabase
     .from("sessions")
-    .update({ status: "finished" })
+    .select("id")
     .eq("status", "active")
+    .maybeSingle()
+
+  if (existingActive) {
+    throw new Error("Již existuje aktivní večer")
+  }
 
   // Fetch players for schedule generation
   const { data: players } = await supabase

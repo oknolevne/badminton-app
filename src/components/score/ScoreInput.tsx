@@ -114,7 +114,7 @@ export function ScoreInput({ match, sessionId, open, onClose }: ScoreInputProps)
           {/* Sets */}
           <div className="flex flex-col items-center gap-2">
             {sets.map((set, i) => (
-              <div key={i} className="flex items-center gap-1">
+              <div key={i} className="flex items-center gap-2">
                 <SetScore
                   setIndex={i}
                   team1Score={set.team1}
@@ -122,14 +122,16 @@ export function ScoreInput({ match, sessionId, open, onClose }: ScoreInputProps)
                   onTeam1Change={(v) => updateSet(i, "team1", v)}
                   onTeam2Change={(v) => updateSet(i, "team2", v)}
                 />
-                {i >= 2 && (
+                {i >= 2 ? (
                   <button
                     type="button"
                     onClick={() => removeSet(i)}
-                    className="ml-1 flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:text-destructive"
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-destructive/20 hover:text-destructive"
                   >
-                    ×
+                    ✕
                   </button>
+                ) : (
+                  <div className="w-10 shrink-0" />
                 )}
               </div>
             ))}

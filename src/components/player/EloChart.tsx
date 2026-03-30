@@ -44,11 +44,10 @@ export function EloChart({ history }: EloChartProps) {
             interval="preserveStartEnd"
           />
           <YAxis
-            domain={[(min: number) => min - 20, (max: number) => max + 20]}
-            tick={{ fontSize: 10, fill: "var(--muted-foreground)" }}
+            tick={{ fontSize: 11, fill: "#8888bb" }}
             tickLine={false}
             axisLine={false}
-            width={45}
+            width={50}
           />
           <Tooltip
             contentStyle={{
