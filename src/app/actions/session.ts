@@ -5,12 +5,11 @@ import { fetchCurrentPlayer } from "@/lib/supabase/queries/players"
 import { generateSchedule, validatePlayerCount } from "@/lib/pairing"
 import { processMatchElo } from "./elo"
 import { revalidatePath } from "next/cache"
-import { redirect } from "next/navigation"
 import { z } from "zod"
 
 // ==================== createSession ====================
 
-export async function createSession(playerIds: number[]) {
+export async function createSession(playerIds: number[]): Promise<{ sessionId: string }> {
   const currentPlayer = await fetchCurrentPlayer()
   if (!currentPlayer) throw new Error("Nepřihlášen")
 
@@ -68,7 +67,7 @@ export async function createSession(playerIds: number[]) {
   const sessionId = data as string
 
   revalidatePath("/dashboard")
-  redirect(`/session/${sessionId}`)
+  return { sessionId }
 }
 
 // ==================== updateMatchResult ====================
@@ -179,5 +178,4 @@ export async function deleteSession(sessionId: string) {
   if (error) throw new Error("Chyba při mazání večera")
 
   revalidatePath("/dashboard")
-  redirect("/dashboard")
 }

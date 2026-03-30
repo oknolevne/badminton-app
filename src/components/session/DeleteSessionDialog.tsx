@@ -1,6 +1,7 @@
 "use client"
 
-import { useTransition } from "react"
+import { useState, useTransition } from "react"
+import { useRouter } from "next/navigation"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,10 +23,17 @@ interface DeleteSessionDialogProps {
 
 export function DeleteSessionDialog({ sessionId }: DeleteSessionDialogProps) {
   const [isPending, startTransition] = useTransition()
+  const [error, setError] = useState<string | null>(null)
+  const router = useRouter()
 
   function handleDelete() {
     startTransition(async () => {
-      await deleteSession(sessionId)
+      try {
+        await deleteSession(sessionId)
+        router.push("/dashboard")
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Chyba při mazání")
+      }
     })
   }
 
@@ -44,6 +52,7 @@ export function DeleteSessionDialog({ sessionId }: DeleteSessionDialogProps) {
             Tato akce smaže všechny zápasy a výsledky tohoto večera. Nelze ji vrátit zpět.
           </AlertDialogDescription>
         </AlertDialogHeader>
+        {error && <p className="text-sm text-destructive">{error}</p>}
         <AlertDialogFooter>
           <AlertDialogCancel>Zrušit</AlertDialogCancel>
           <AlertDialogAction onClick={handleDelete} disabled={isPending}>

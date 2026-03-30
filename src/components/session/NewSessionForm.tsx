@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useTransition } from "react"
+import { useRouter } from "next/navigation"
 import { PlayerSelector } from "./PlayerSelector"
 import { validatePlayerCount } from "@/lib/pairing"
 import { createSession } from "@/app/actions/session"
@@ -15,6 +16,7 @@ export function NewSessionForm({ players }: NewSessionFormProps) {
   const [selectedIds, setSelectedIds] = useState<number[]>([])
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
+  const router = useRouter()
 
   const validation = validatePlayerCount(selectedIds.length)
 
@@ -38,7 +40,8 @@ export function NewSessionForm({ players }: NewSessionFormProps) {
 
     startTransition(async () => {
       try {
-        await createSession(selectedIds)
+        const { sessionId } = await createSession(selectedIds)
+        router.push(`/session/${sessionId}`)
       } catch (e) {
         setError(e instanceof Error ? e.message : "Chyba při vytváření večera")
       }
