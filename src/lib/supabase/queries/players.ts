@@ -1,15 +1,11 @@
-import { createClient } from "@/lib/supabase/server"
+import { createClient, getAuthUser } from "@/lib/supabase/server"
 import type { Player } from "@/types"
 
 export async function fetchCurrentPlayer(): Promise<Player | null> {
-  const supabase = await createClient()
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
+  const user = await getAuthUser()
   if (!user) return null
 
+  const supabase = await createClient()
   const { data } = await supabase
     .from("players")
     .select("*")

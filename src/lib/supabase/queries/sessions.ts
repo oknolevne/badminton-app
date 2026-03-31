@@ -44,22 +44,17 @@ export async function fetchSessionById(id: string): Promise<Session | null> {
 async function buildSession(sessionId: string): Promise<Session | null> {
   const supabase = await createClient()
 
-  // 1. Fetch session
-  const { data: session } = await supabase
-    .from("sessions")
-    .select("*")
-    .eq("id", sessionId)
-    .maybeSingle()
+  // Round 1: 3 independent queries in parallel
+  const [sessionRes, playersRes, matchesRes] = await Promise.all([
+    supabase.from("sessions").select("*").eq("id", sessionId).maybeSingle(),
+    supabase.from("session_players").select("player_id, is_training, players(*)").eq("session_id", sessionId),
+    supabase.from("matches").select("*").eq("session_id", sessionId).order("block_number").order("match_number"),
+  ])
 
-  if (!session) return null
+  if (!sessionRes.data) return null
+  const session = sessionRes.data
 
-  // 2. Fetch session players with player data
-  const { data: sessionPlayers } = await supabase
-    .from("session_players")
-    .select("player_id, is_training, players(*)")
-    .eq("session_id", sessionId)
-
-  const players: Player[] = (sessionPlayers ?? []).map((sp) => {
+  const players: Player[] = (playersRes.data ?? []).map((sp) => {
     const p = sp.players as unknown as Record<string, unknown>
     return {
       id: p.id as number,
@@ -72,15 +67,8 @@ async function buildSession(sessionId: string): Promise<Session | null> {
     }
   })
 
-  // 3. Fetch matches
-  const { data: matches } = await supabase
-    .from("matches")
-    .select("*")
-    .eq("session_id", sessionId)
-    .order("block_number")
-    .order("match_number")
-
-  // 4. Fetch match results for all matches
+  // Round 2: match_results depends on matchIds from Round 1
+  const matches = matchesRes.data
   const matchIds = (matches ?? []).map((m) => m.id)
   const { data: results } = matchIds.length > 0
     ? await supabase

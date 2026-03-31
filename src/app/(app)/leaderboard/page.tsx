@@ -6,19 +6,20 @@ export default async function LeaderboardPage() {
   const players = await fetchPlayers()
   const supabase = await createClient()
 
-  // Get last ELO delta for each player
-  const lastDeltas = new Map<number, number>()
-  for (const player of players) {
-    const { data } = await supabase
-      .from("elo_history")
-      .select("delta")
-      .eq("player_id", player.id)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle()
+  // Get last ELO delta for all players in one batch query
+  const playerIds = players.map((p) => p.id)
+  const { data: allDeltas } = await supabase
+    .from("elo_history")
+    .select("player_id, delta, created_at")
+    .in("player_id", playerIds)
+    .order("created_at", { ascending: false })
 
-    if (data) {
-      lastDeltas.set(player.id, data.delta)
+  const lastDeltas = new Map<number, number>()
+  if (allDeltas) {
+    for (const entry of allDeltas) {
+      if (!lastDeltas.has(entry.player_id)) {
+        lastDeltas.set(entry.player_id, entry.delta)
+      }
     }
   }
 
