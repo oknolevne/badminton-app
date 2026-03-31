@@ -17,4 +17,5 @@ export interface MatchResult {
   totalTeam2: number
   submittedBy: number
   submittedAt: string
+  updatedAt: string | null
 }

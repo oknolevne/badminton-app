@@ -81,6 +81,7 @@ export function ScoreInput({ match, sessionId, open, onClose }: ScoreInputProps)
           matchId: match.id,
           sessionId,
           sets,
+          expectedTimestamp: match.result?.updatedAt ?? match.result?.submittedAt,
         })
         onClose()
       } catch (e) {

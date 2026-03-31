@@ -106,6 +106,7 @@ export async function updateMatchResult(input: {
   matchId: string
   sessionId: string
   sets: { team1: number; team2: number }[]
+  expectedTimestamp?: string
 }) {
   const currentPlayer = await fetchCurrentPlayer()
   if (!currentPlayer) throw new Error("Nepřihlášen")
@@ -116,6 +117,7 @@ export async function updateMatchResult(input: {
   }
 
   const { matchId, sessionId, sets } = parsed.data
+  const { expectedTimestamp } = input
 
   const totalTeam1 = sets.reduce((sum, s) => sum + s.team1, 0)
   const totalTeam2 = sets.reduce((sum, s) => sum + s.team2, 0)
@@ -125,12 +127,17 @@ export async function updateMatchResult(input: {
   // Check if result already exists
   const { data: existing } = await supabase
     .from("match_results")
-    .select("id")
+    .select("id, submitted_at, updated_at")
     .eq("match_id", matchId)
     .maybeSingle()
 
   if (existing) {
-    // Update
+    // Optimistic lock: verify timestamp hasn't changed
+    const currentTimestamp = existing.updated_at ?? existing.submitted_at
+    if (expectedTimestamp && currentTimestamp !== expectedTimestamp) {
+      throw new Error("Výsledek byl mezitím upraven jiným hráčem. Zavři formulář a zkus znovu.")
+    }
+
     const { error } = await supabase
       .from("match_results")
       .update({
@@ -144,7 +151,6 @@ export async function updateMatchResult(input: {
 
     if (error) throw new Error("Chyba při aktualizaci výsledku")
   } else {
-    // Insert
     const { error } = await supabase.from("match_results").insert({
       match_id: matchId,
       sets,
@@ -153,7 +159,12 @@ export async function updateMatchResult(input: {
       submitted_by: currentPlayer.id,
     })
 
-    if (error) throw new Error("Chyba při ukládání výsledku")
+    if (error) {
+      if (error.code === "23505") {
+        throw new Error("Výsledek byl mezitím zadán jiným hráčem. Zavři formulář a zkus znovu.")
+      }
+      throw new Error("Chyba při ukládání výsledku")
+    }
   }
 
   // Recalculate ELO

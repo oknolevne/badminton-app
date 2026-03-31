@@ -169,6 +169,7 @@ async function buildSession(sessionId: string): Promise<Session | null> {
             totalTeam2: result.total_team2 as number,
             submittedBy: result.submitted_by as number,
             submittedAt: result.submitted_at as string,
+            updatedAt: (result.updated_at as string) ?? null,
           }
         : null,
     }

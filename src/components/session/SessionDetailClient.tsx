@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useCallback } from "react"
 import { MatchCard } from "./MatchCard"
 import { SessionTimer } from "./SessionTimer"
 import { DeleteSessionDialog } from "./DeleteSessionDialog"
@@ -16,8 +16,21 @@ interface SessionDetailClientProps {
 export function SessionDetailClient({ session }: SessionDetailClientProps) {
   const [selectedMatch, setSelectedMatch] = useState<Match | null>(null)
   const [scoreOpen, setScoreOpen] = useState(false)
+  const [toast, setToast] = useState<string | null>(null)
 
-  useRealtimeSession(session.id)
+  const handleMatchUpdated = useCallback(
+    (updatedMatchId: string) => {
+      if (scoreOpen && selectedMatch?.id === updatedMatchId) {
+        setScoreOpen(false)
+        setSelectedMatch(null)
+        setToast("Výsledek byl upraven jiným hráčem.")
+        setTimeout(() => setToast(null), 3000)
+      }
+    },
+    [scoreOpen, selectedMatch?.id]
+  )
+
+  useRealtimeSession(session.id, handleMatchUpdated)
 
   function handleScoreClick(match: Match) {
     setSelectedMatch(match)
@@ -55,7 +68,6 @@ export function SessionDetailClient({ session }: SessionDetailClientProps) {
         const mainMatches = block.matches.filter((m) => !m.isTraining)
         const trainingMatches = block.matches.filter((m) => m.isTraining)
 
-        // Group main matches into time slots
         const slotSize =
           mainMatches.length >= 3 && mainMatches.length % 3 === 0
             ? mainMatches.length / 3
@@ -118,6 +130,13 @@ export function SessionDetailClient({ session }: SessionDetailClientProps) {
         open={scoreOpen}
         onClose={() => setScoreOpen(false)}
       />
+
+      {/* Toast */}
+      {toast && (
+        <div className="fixed bottom-20 left-4 right-4 z-50 mx-auto max-w-lg rounded-lg bg-accent px-4 py-3 text-center text-sm text-accent-foreground shadow-lg">
+          {toast}
+        </div>
+      )}
     </div>
   )
 }
