@@ -25,7 +25,8 @@ export function calculateEloDelta(
   const expected = 1 / (1 + Math.pow(10, (oppTeamElo - myTeamElo) / DIVISOR))
   const actual = myPoints / totalPoints
 
-  return Math.round(K * (actual - expected))
+  const raw = K * (actual - expected)
+  return Math.sign(raw) * Math.round(Math.abs(raw))
 }
 
 export function calculateTeamElo(elo1: number, elo2: number): number {
