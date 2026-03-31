@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback } from "react"
+import { useState, useCallback, useRef } from "react"
 import { MatchCard } from "./MatchCard"
 import { SessionTimer } from "./SessionTimer"
 import { DeleteSessionDialog } from "./DeleteSessionDialog"
@@ -17,9 +17,16 @@ export function SessionDetailClient({ session }: SessionDetailClientProps) {
   const [selectedMatch, setSelectedMatch] = useState<Match | null>(null)
   const [scoreOpen, setScoreOpen] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
+  const justSavedMatchId = useRef<string | null>(null)
 
   const handleMatchUpdated = useCallback(
     (updatedMatchId: string) => {
+      // Ignore our own save — prevents false-positive toast
+      if (justSavedMatchId.current === updatedMatchId) {
+        justSavedMatchId.current = null
+        return
+      }
+
       if (scoreOpen && selectedMatch?.id === updatedMatchId) {
         setScoreOpen(false)
         setSelectedMatch(null)
@@ -33,8 +40,16 @@ export function SessionDetailClient({ session }: SessionDetailClientProps) {
   useRealtimeSession(session.id, handleMatchUpdated)
 
   function handleScoreClick(match: Match) {
+    justSavedMatchId.current = null
     setSelectedMatch(match)
     setScoreOpen(true)
+  }
+
+  function handleScoreSaved(matchId: string) {
+    justSavedMatchId.current = matchId
+    setTimeout(() => {
+      justSavedMatchId.current = null
+    }, 2000)
   }
 
   const sessionDate = new Date(session.date).toLocaleDateString("cs-CZ", {
@@ -129,6 +144,7 @@ export function SessionDetailClient({ session }: SessionDetailClientProps) {
         sessionId={session.id}
         open={scoreOpen}
         onClose={() => setScoreOpen(false)}
+        onSaved={handleScoreSaved}
       />
 
       {/* Toast */}

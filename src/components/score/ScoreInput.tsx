@@ -18,9 +18,10 @@ interface ScoreInputProps {
   sessionId: string
   open: boolean
   onClose: () => void
+  onSaved?: (matchId: string) => void
 }
 
-export function ScoreInput({ match, sessionId, open, onClose }: ScoreInputProps) {
+export function ScoreInput({ match, sessionId, open, onClose, onSaved }: ScoreInputProps) {
   const [sets, setSets] = useState<{ team1: number; team2: number }[]>([
     { team1: 0, team2: 0 },
     { team1: 0, team2: 0 },
@@ -83,6 +84,7 @@ export function ScoreInput({ match, sessionId, open, onClose }: ScoreInputProps)
           sets,
           expectedTimestamp: match.result?.updatedAt ?? match.result?.submittedAt,
         })
+        onSaved?.(match.id)
         onClose()
       } catch (e) {
         setError(e instanceof Error ? e.message : "Chyba při ukládání")
