@@ -1,84 +1,78 @@
-import { redirect } from "next/navigation"
 import {
-  fetchCurrentPlayer,
-  fetchPlayerStats,
-  fetchPlayerRank,
-  fetchRecentMatches,
+  fetchPlayers,
+  fetchCommunityStats,
+  fetchCommunityRecentMatches,
 } from "@/lib/supabase/queries"
-import { formatElo, formatEloDelta } from "@/lib/utils"
+import { formatElo } from "@/lib/utils"
 import { StatCard } from "@/components/shared/StatCard"
-import { Badge } from "@/components/ui/badge"
+
+const medals = ["🥇", "🥈", "🥉"]
 
 export default async function DashboardPage() {
-  const player = await fetchCurrentPlayer()
-  if (!player) redirect("/login")
-
-  const [stats, rank, recentMatches] = await Promise.all([
-    fetchPlayerStats(player.id),
-    fetchPlayerRank(player.id),
-    fetchRecentMatches(player.id, 3),
+  const [players, communityStats, recentMatches] = await Promise.all([
+    fetchPlayers(),
+    fetchCommunityStats(),
+    fetchCommunityRecentMatches(5),
   ])
 
-  const lastDelta = stats.eloHistory.length > 0
-    ? stats.eloHistory[stats.eloHistory.length - 1].delta
-    : null
+  const top3 = players.slice(0, 3)
 
   return (
     <div className="mx-auto max-w-lg px-4 py-6 space-y-6">
-      {/* ELO Hero Card */}
-      <div className="rounded-2xl border border-elo-border bg-elo-bg p-6 text-center">
-        <p className="text-sm text-white/70">Tvoje ELO</p>
-        <p className="mt-1 font-display text-7xl text-white">
-          {formatElo(player.elo)}
-        </p>
-        {lastDelta !== null && (
-          <Badge
-            variant={lastDelta >= 0 ? "default" : "destructive"}
-            className="mt-2 bg-primary/50 text-white border-transparent"
-          >
-            {formatEloDelta(lastDelta)}
-          </Badge>
-        )}
+      {/* TOP 3 */}
+      <div>
+        <h3 className="mb-3 text-sm font-medium text-muted-foreground">
+          Top hráči
+        </h3>
+        <div className="grid grid-cols-3 gap-2">
+          {top3.map((player, i) => (
+            <div
+              key={player.id}
+              className="flex flex-col items-center rounded-xl border border-border bg-card p-3"
+            >
+              <span className="text-2xl">{medals[i]}</span>
+              <p className="mt-1 text-sm font-medium text-foreground truncate w-full text-center">
+                {player.displayName}
+              </p>
+              <p className="font-display text-lg text-primary">
+                {formatElo(player.elo)}
+              </p>
+            </div>
+          ))}
+        </div>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-3 gap-3">
-        <StatCard label="Zápasy" value={stats.totalMatches} />
-        <StatCard label="Win Rate" value={`${stats.winRate}%`} />
-        <StatCard label="Pořadí" value={`#${rank}`} />
+      {/* Community Stats */}
+      <div className="grid grid-cols-2 gap-3">
+        <StatCard label="Zápasy" value={communityStats.totalMatches} />
+        <StatCard label="Hráči" value={communityStats.activePlayers} />
       </div>
 
-      {/* Recent Matches */}
+      {/* Recent Community Matches */}
       {recentMatches.length > 0 && (
         <div>
           <h3 className="mb-3 text-sm font-medium text-muted-foreground">
             Poslední zápasy
           </h3>
           <div className="space-y-2">
-            {recentMatches.map((match) => {
-              if (!match) return null
-              return (
-                <div
-                  key={match.matchId}
-                  className="flex items-center justify-between rounded-lg border border-border bg-card p-3"
-                >
-                  <div>
-                    <p className="text-sm text-foreground">
-                      {match.partner} vs {match.opponents}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {match.score}
-                    </p>
-                  </div>
-                  <Badge
-                    variant={match.won ? "default" : "destructive"}
-                    className="text-xs"
-                  >
-                    {formatEloDelta(match.delta)}
-                  </Badge>
+            {recentMatches.map((match) => (
+              <div
+                key={match.matchId}
+                className="flex items-center justify-between rounded-lg border border-border bg-card p-3"
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm text-foreground truncate">
+                    {match.team1Player1} + {match.team1Player2}
+                  </p>
+                  <p className="text-xs text-muted-foreground truncate">
+                    vs {match.team2Player1} + {match.team2Player2}
+                  </p>
                 </div>
-              )
-            })}
+                <p className="ml-3 font-display text-lg text-foreground">
+                  {match.score}
+                </p>
+              </div>
+            ))}
           </div>
         </div>
       )}

@@ -22,6 +22,7 @@ export interface PlayerStats {
 
 export interface EloHistoryEntry {
   date: string
+  sessionDate?: string
   elo: number
   delta: number
   matchId: string
@@ -32,4 +33,34 @@ export interface PartnerStat {
   playerName: string
   count: number
   winRate: number
+}
+
+export interface CommunityStats {
+  totalMatches: number
+  activePlayers: number
+}
+
+export interface CommunityMatch {
+  matchId: string
+  team1Player1: string
+  team1Player2: string
+  team2Player1: string
+  team2Player2: string
+  score: string
+  submittedAt: string
+}
+
+export interface PlayerRecord {
+  matchId: string
+  delta: number
+  elo: number
+  opponentNames: string
+  partnerName: string
+  score: string
+  date: string
+}
+
+export interface PlayerRecords {
+  bestWin: PlayerRecord | null
+  worstLoss: PlayerRecord | null
 }

@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server"
-import type { PlayerStats, EloHistoryEntry, PartnerStat } from "@/types"
+import type { PlayerStats, EloHistoryEntry, PartnerStat, CommunityStats, CommunityMatch, PlayerRecord, PlayerRecords } from "@/types"
 
 export async function fetchPlayerStats(playerId: number): Promise<PlayerStats> {
   const supabase = await createClient()
@@ -112,14 +112,39 @@ export async function fetchEloHistory(playerId: number): Promise<EloHistoryEntry
     .eq("player_id", playerId)
     .order("created_at", { ascending: true })
 
-  if (!data) return []
+  if (!data || data.length === 0) return []
 
-  return data.map((entry) => ({
-    date: entry.created_at,
-    elo: entry.elo_after,
-    delta: entry.delta,
-    matchId: entry.match_id,
-  }))
+  // Batch-fetch matches to get session_ids
+  const matchIds = [...new Set(data.map((e) => e.match_id))]
+  const { data: matches } = await supabase
+    .from("matches")
+    .select("id, session_id")
+    .in("id", matchIds)
+
+  // Batch-fetch sessions to get real dates
+  const sessionIds = [...new Set((matches ?? []).map((m) => m.session_id))]
+  const { data: sessions } = sessionIds.length > 0
+    ? await supabase.from("sessions").select("id, date").in("id", sessionIds)
+    : { data: [] }
+
+  const matchSessionMap = new Map<string, string>()
+  for (const m of matches ?? []) matchSessionMap.set(m.id, m.session_id)
+
+  const sessionDateMap = new Map<string, string>()
+  for (const s of sessions ?? []) sessionDateMap.set(s.id, s.date)
+
+  return data.map((entry) => {
+    const sessionId = matchSessionMap.get(entry.match_id)
+    const sessionDate = sessionId ? sessionDateMap.get(sessionId) : undefined
+
+    return {
+      date: entry.created_at,
+      sessionDate: sessionDate ?? entry.created_at,
+      elo: entry.elo_after,
+      delta: entry.delta,
+      matchId: entry.match_id,
+    }
+  })
 }
 
 export async function fetchPlayerRank(playerId: number): Promise<number> {
@@ -211,6 +236,145 @@ export async function fetchRecentMatches(playerId: number, limit = 3) {
       date: entry.created_at,
     }
   }).filter(Boolean)
+}
+
+export async function fetchCommunityStats(): Promise<CommunityStats> {
+  const supabase = await createClient()
+
+  const [matchCount, playerCount] = await Promise.all([
+    supabase.from("match_results").select("*", { count: "exact", head: true }),
+    supabase.from("players").select("*", { count: "exact", head: true }).eq("is_active", true),
+  ])
+
+  return {
+    totalMatches: matchCount.count ?? 0,
+    activePlayers: playerCount.count ?? 0,
+  }
+}
+
+export async function fetchCommunityRecentMatches(limit = 5): Promise<CommunityMatch[]> {
+  const supabase = await createClient()
+
+  const { data } = await supabase
+    .from("matches")
+    .select("id, team1_player1, team1_player2, team2_player1, team2_player2, match_results(total_team1, total_team2, submitted_at)")
+    .eq("is_training", false)
+    .not("match_results", "is", null)
+    .order("created_at", { ascending: false })
+    .limit(limit)
+
+  if (!data || data.length === 0) return []
+
+  const playerIds = new Set<number>()
+  for (const m of data) {
+    playerIds.add(m.team1_player1)
+    playerIds.add(m.team1_player2)
+    playerIds.add(m.team2_player1)
+    playerIds.add(m.team2_player2)
+  }
+
+  const { data: players } = await supabase
+    .from("players")
+    .select("id, display_name")
+    .in("id", [...playerIds])
+
+  const nameMap = new Map<number, string>()
+  for (const p of players ?? []) nameMap.set(p.id, p.display_name)
+
+  return data.map((m) => {
+    const result = Array.isArray(m.match_results) ? m.match_results[0] : m.match_results
+    return {
+      matchId: m.id,
+      team1Player1: nameMap.get(m.team1_player1) ?? "?",
+      team1Player2: nameMap.get(m.team1_player2) ?? "?",
+      team2Player1: nameMap.get(m.team2_player1) ?? "?",
+      team2Player2: nameMap.get(m.team2_player2) ?? "?",
+      score: result ? `${result.total_team1}:${result.total_team2}` : "?",
+      submittedAt: result?.submitted_at ?? "",
+    }
+  })
+}
+
+export async function fetchPlayerRecords(playerId: number): Promise<PlayerRecords> {
+  const supabase = await createClient()
+
+  const { data: eloEntries } = await supabase
+    .from("elo_history")
+    .select("match_id, delta, elo_after, created_at")
+    .eq("player_id", playerId)
+
+  if (!eloEntries || eloEntries.length === 0) {
+    return { bestWin: null, worstLoss: null }
+  }
+
+  const wins = eloEntries.filter((e) => e.delta > 0)
+  const losses = eloEntries.filter((e) => e.delta < 0)
+
+  const bestWinEntry = wins.length > 0
+    ? wins.reduce((best, e) => (e.delta > best.delta ? e : best))
+    : null
+  const worstLossEntry = losses.length > 0
+    ? losses.reduce((worst, e) => (e.delta < worst.delta ? e : worst))
+    : null
+
+  const relevantMatchIds = [bestWinEntry?.match_id, worstLossEntry?.match_id].filter(Boolean) as string[]
+  if (relevantMatchIds.length === 0) return { bestWin: null, worstLoss: null }
+
+  const { data: matches } = await supabase
+    .from("matches")
+    .select("id, team1_player1, team1_player2, team2_player1, team2_player2, session_id, match_results(total_team1, total_team2)")
+    .in("id", relevantMatchIds)
+
+  const playerIdsSet = new Set<number>()
+  const sessionIds = new Set<string>()
+  for (const m of matches ?? []) {
+    playerIdsSet.add(m.team1_player1)
+    playerIdsSet.add(m.team1_player2)
+    playerIdsSet.add(m.team2_player1)
+    playerIdsSet.add(m.team2_player2)
+    if (m.session_id) sessionIds.add(m.session_id)
+  }
+
+  const [playersRes, sessionsRes] = await Promise.all([
+    supabase.from("players").select("id, display_name").in("id", [...playerIdsSet]),
+    sessionIds.size > 0
+      ? supabase.from("sessions").select("id, date").in("id", [...sessionIds])
+      : Promise.resolve({ data: [] as { id: string; date: string }[] }),
+  ])
+
+  const nameMap = new Map<number, string>()
+  for (const p of playersRes.data ?? []) nameMap.set(p.id, p.display_name)
+
+  const sessionDateMap = new Map<string, string>()
+  for (const s of sessionsRes.data ?? []) sessionDateMap.set(s.id, s.date)
+
+  function buildRecord(entry: { match_id: string; delta: number; elo_after: number; created_at: string }): PlayerRecord | null {
+    const match = matches?.find((m) => m.id === entry.match_id)
+    if (!match) return null
+
+    const isTeam1 = match.team1_player1 === playerId || match.team1_player2 === playerId
+    const partnerId = isTeam1
+      ? (match.team1_player1 === playerId ? match.team1_player2 : match.team1_player1)
+      : (match.team2_player1 === playerId ? match.team2_player2 : match.team2_player1)
+    const opp1 = isTeam1 ? match.team2_player1 : match.team1_player1
+    const opp2 = isTeam1 ? match.team2_player2 : match.team1_player2
+    const result = Array.isArray(match.match_results) ? match.match_results[0] : match.match_results
+
+    return {
+      matchId: entry.match_id,
+      delta: entry.delta,
+      elo: entry.elo_after,
+      opponentNames: `${nameMap.get(opp1) ?? "?"} & ${nameMap.get(opp2) ?? "?"}`,
+      partnerName: nameMap.get(partnerId) ?? "?",
+      score: result ? `${result.total_team1}:${result.total_team2}` : "?",
+      date: sessionDateMap.get(match.session_id) ?? entry.created_at,
+    }
+  }
+
+  return {
+    bestWin: bestWinEntry ? buildRecord(bestWinEntry) : null,
+    worstLoss: worstLossEntry ? buildRecord(worstLossEntry) : null,
+  }
 }
 
 function findTopPartner(

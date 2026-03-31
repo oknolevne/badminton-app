@@ -26,7 +26,7 @@ export function EloChart({ history }: EloChartProps) {
   const data = history.map((entry, index) => ({
     index,
     elo: entry.elo,
-    date: new Date(entry.date).toLocaleDateString("cs-CZ", {
+    date: new Date(entry.sessionDate ?? entry.date).toLocaleDateString("cs-CZ", {
       day: "numeric",
       month: "short",
     }),
