@@ -9,7 +9,7 @@ export function TopBar() {
         <span className="text-primary">SMASH</span>
       </h1>
       <form action={logout}>
-        <Button variant="ghost" size="sm" className="text-muted-foreground">
+        <Button type="submit" variant="ghost" size="sm" className="text-muted-foreground">
           Odhlásit
         </Button>
       </form>
