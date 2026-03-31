@@ -25,7 +25,7 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="cs" className={cn("dark", bebasNeue.variable, dmSans.variable)}>
+    <html lang="cs" className={cn(bebasNeue.variable, dmSans.variable)}>
       <body className="min-h-dvh bg-background text-foreground font-sans antialiased">
         {children}
       </body>

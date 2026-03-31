@@ -52,7 +52,7 @@ export function MatchCard({ match, onScoreClick }: MatchCardProps) {
               </span>
             </div>
           ) : (
-            <span className="text-xs text-primary">Zadat skóre</span>
+            <span className="text-xs text-[#bbb]">Zadat skóre</span>
           )}
         </div>
 

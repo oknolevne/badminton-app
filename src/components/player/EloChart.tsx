@@ -44,7 +44,7 @@ export function EloChart({ history }: EloChartProps) {
             interval="preserveStartEnd"
           />
           <YAxis
-            tick={{ fontSize: 11, fill: "#8888bb" }}
+            tick={{ fontSize: 11, fill: "#5F5980" }}
             tickLine={false}
             axisLine={false}
             width={50}

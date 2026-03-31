@@ -27,14 +27,14 @@ export default async function DashboardPage() {
     <div className="mx-auto max-w-lg px-4 py-6 space-y-6">
       {/* ELO Hero Card */}
       <div className="rounded-2xl border border-elo-border bg-elo-bg p-6 text-center">
-        <p className="text-sm text-text-label">Tvoje ELO</p>
-        <p className="mt-1 font-display text-7xl text-foreground">
+        <p className="text-sm text-white/70">Tvoje ELO</p>
+        <p className="mt-1 font-display text-7xl text-white">
           {formatElo(player.elo)}
         </p>
         {lastDelta !== null && (
           <Badge
             variant={lastDelta >= 0 ? "default" : "destructive"}
-            className="mt-2"
+            className="mt-2 bg-primary/50 text-white border-transparent"
           >
             {formatEloDelta(lastDelta)}
           </Badge>

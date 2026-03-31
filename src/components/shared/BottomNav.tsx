@@ -24,7 +24,7 @@ export function BottomNav({ activeSessionId }: BottomNavProps) {
   ]
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 flex h-16 items-center justify-around border-t border-border-subtle bg-background-nav">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 flex h-16 items-center justify-around border-t border-[#c8c8c8] bg-background-nav">
       {navItems.map(({ href, label, icon: Icon }) => {
         const isActive =
           pathname === href ||
@@ -36,14 +36,15 @@ export function BottomNav({ activeSessionId }: BottomNavProps) {
             key={label}
             href={href}
             className={cn(
-              "flex flex-col items-center gap-1 px-3 py-2 text-xs transition-colors",
-              isActive
-                ? "text-primary"
-                : "text-muted-foreground hover:text-foreground"
+              "relative flex flex-col items-center gap-1 px-3 py-2 text-xs text-foreground transition-opacity",
+              isActive ? "opacity-100" : "opacity-30 hover:opacity-60"
             )}
           >
             <Icon className="h-5 w-5" />
             <span>{label}</span>
+            {isActive && (
+              <span className="absolute -bottom-1 h-1 w-1 rounded-full bg-primary" />
+            )}
           </Link>
         )
       })}
