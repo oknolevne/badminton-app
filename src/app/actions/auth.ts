@@ -5,8 +5,11 @@ import { redirect } from "next/navigation"
 import { z } from "zod"
 
 const loginSchema = z.object({
-  username: z.string().min(1, "Zadej uživatelské jméno"),
-  password: z.string().min(1, "Zadej heslo"),
+  id: z.string().min(1, "Zadej své ID").transform((v) => {
+    const n = parseInt(v)
+    if (isNaN(n) || n <= 0) throw new Error("ID musí být kladné číslo")
+    return n
+  }),
 })
 
 export interface LoginState {
@@ -18,16 +21,16 @@ export async function login(
   formData: FormData
 ): Promise<LoginState> {
   const parsed = loginSchema.safeParse({
-    username: formData.get("username"),
-    password: formData.get("password"),
+    id: formData.get("id"),
   })
 
   if (!parsed.success) {
-    return { error: parsed.error.errors[0].message }
+    return { error: "Zadej platné herní ID" }
   }
 
-  const { username, password } = parsed.data
-  const email = `${username.toLowerCase()}@slashsmash.app`
+  const id = parsed.data.id
+  const email = `${id}@slashsmash.cz`
+  const password = String(id)
 
   const supabase = await createClient()
 
@@ -37,7 +40,7 @@ export async function login(
   })
 
   if (error) {
-    return { error: "Nesprávné jméno nebo heslo" }
+    return { error: "Hráč s tímto ID neexistuje" }
   }
 
   redirect("/dashboard")

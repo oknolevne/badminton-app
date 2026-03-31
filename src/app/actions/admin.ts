@@ -70,14 +70,29 @@ export async function addPlayer(input: z.infer<typeof addPlayerSchema>) {
   if (!parsed.success) throw new Error(parsed.error.errors[0].message)
 
   const { id, username, name, elo } = parsed.data
-  const supabase = await createClient()
 
+  // 1. Create auth account FIRST
+  const adminClient = createAdminClient()
+  const email = `${id}@slashsmash.cz`
+  const { data: authData, error: authError } = await adminClient.auth.admin.createUser({
+    email,
+    password: String(id),
+    email_confirm: true,
+  })
+
+  if (authError || !authData.user) {
+    throw new Error(`Chyba při vytváření účtu: ${authError?.message}`)
+  }
+
+  // 2. Insert player with auth_user_id
+  const supabase = await createClient()
   const { error } = await supabase.from("players").insert({
     id,
     username,
     display_name: name,
     elo,
     is_active: true,
+    auth_user_id: authData.user.id,
   })
 
   if (error) {

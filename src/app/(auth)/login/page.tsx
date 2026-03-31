@@ -10,7 +10,7 @@ export default function LoginPage() {
             <span className="text-primary">SMASH</span>
           </h1>
           <p className="mt-2 text-muted-foreground">
-            Přihlaš se ke svému účtu
+            Zadej své herní ID
           </p>
         </div>
         <LoginForm />

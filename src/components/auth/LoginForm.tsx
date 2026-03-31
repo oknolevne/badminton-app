@@ -13,29 +13,17 @@ export function LoginForm() {
   return (
     <form action={formAction} className="space-y-4">
       <div className="space-y-2">
-        <label htmlFor="username" className="text-sm text-text-label">
-          Uživatelské jméno
+        <label htmlFor="id" className="text-sm text-text-label">
+          Zadej své ID
         </label>
         <Input
-          id="username"
-          name="username"
-          type="text"
-          autoComplete="username"
-          autoCapitalize="none"
+          id="id"
+          name="id"
+          type="number"
+          inputMode="numeric"
+          autoComplete="off"
           required
-          placeholder="např. martin"
-        />
-      </div>
-      <div className="space-y-2">
-        <label htmlFor="password" className="text-sm text-text-label">
-          Heslo
-        </label>
-        <Input
-          id="password"
-          name="password"
-          type="password"
-          autoComplete="current-password"
-          required
+          placeholder="např. 24"
         />
       </div>
       {state.error && (
