@@ -1,6 +1,8 @@
 import { notFound } from "next/navigation"
+import Link from "next/link"
 import { createClient } from "@/lib/supabase/server"
 import {
+  fetchCurrentPlayer,
   fetchPlayerStats,
   fetchEloHistory,
   fetchPlayerRank,
@@ -11,6 +13,7 @@ import { PlayerAvatar } from "@/components/player/PlayerAvatar"
 import { EloChart } from "@/components/player/EloChart"
 import { StatCard } from "@/components/shared/StatCard"
 import { Badge } from "@/components/ui/badge"
+import { Shield } from "lucide-react"
 import { formatElo, formatEloDelta } from "@/lib/utils"
 import type { Player } from "@/types"
 
@@ -43,12 +46,13 @@ export default async function ProfilePage({
     createdAt: playerData.created_at,
   }
 
-  const [stats, eloHistory, rank, recentMatches, records] = await Promise.all([
+  const [stats, eloHistory, rank, recentMatches, records, currentPlayer] = await Promise.all([
     fetchPlayerStats(playerId),
     fetchEloHistory(playerId),
     fetchPlayerRank(playerId),
     fetchRecentMatches(playerId, 5),
     fetchPlayerRecords(playerId),
+    fetchCurrentPlayer(),
   ])
 
   const lastDelta =
@@ -70,7 +74,7 @@ export default async function ProfilePage({
           playerId={player.id}
           size="lg"
         />
-        <div>
+        <div className="flex-1">
           <h2 className="text-2xl font-semibold text-foreground">
             {player.displayName}
           </h2>
@@ -89,6 +93,15 @@ export default async function ProfilePage({
           </div>
           <p className="text-sm text-muted-foreground">#{rank} v žebříčku</p>
         </div>
+        {currentPlayer?.role === "admin" && currentPlayer.id === playerId && (
+          <Link
+            href="/admin"
+            className="flex items-center gap-1 rounded-lg border border-border bg-card px-3 py-2 text-sm text-muted-foreground hover:text-foreground"
+          >
+            <Shield className="h-4 w-4" />
+            <span>Admin</span>
+          </Link>
+        )}
       </div>
 
       {/* Stats */}
